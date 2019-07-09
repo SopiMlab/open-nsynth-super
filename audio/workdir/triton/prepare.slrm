@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH --time=00:10:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
+#SBATCH --gres=gpu:1
+
+PROJECT_DIR="$WRKDIR/open-nsynth-super"
+CONDA_ENV="$WRKDIR/conda/open-nsynth-super"
+
+cd "$PROJECT_DIR/audio/workdir"
+module load anaconda2/5.1.0-gpu
+source activate "$CONDA_ENV"
+
+srun python 01_compute_input_embeddings.py
+srun python 02_compute_new_embeddings.py
+srun python 03_batch_embeddings.py

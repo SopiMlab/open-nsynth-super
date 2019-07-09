@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH --time=1:00
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=32G
+
+N=4
+PROJECT_DIR="$WRKDIR/open-nsynth-super"
+CONDA_ENV="$WRKDIR/conda/open-nsynth-super"
+
+cd "$PROJECT_DIR/audio/workdir"
+module load ffmpeg
+module load LAME
+module load SoX
+module load anaconda2/5.1.0-gpu
+source activate "$CONDA_ENV"
+
+if [ ! -d audio_output/raw_wav ]; then
+	mkdir audio_output/raw_wav
+	mv audio_output/batch* audio_output/raw_wav
+fi
+
+srun ./triton/clean.sh "$N" "$PROJECT_DIR"
