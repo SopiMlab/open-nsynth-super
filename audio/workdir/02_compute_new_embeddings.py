@@ -73,6 +73,7 @@ for combination in tqdm(combinations):
 			name = description_to_name(meta)
 
 			#	reshape array
-			interpolated = np.reshape(interpolated, (1,) + interpolated.shape)
+                        # disabled, see https://github.com/googlecreativelab/open-nsynth-super/issues/77
+			#interpolated = np.reshape(interpolated, (1,) + interpolated.shape)
 
 			np.save('embeddings_output/' + name + '.npy', interpolated.astype(np.float32))
