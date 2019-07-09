@@ -33,9 +33,11 @@ if not os.path.exists(original_path):
         print("No input directory found")
         sys.exit(1)
 
-if not os.path.exists(cleaned_path):
+try:
         os.mkdir(cleaned_path)
-
+except OSError as e:
+        if e.errno != 17:
+                raise
 
 files = os.listdir(original_path)
 files = [f for f in files if '.wav' in f]
@@ -79,9 +81,12 @@ for fpath in tqdm(files):
   os.remove(cleaned_file)
 
 #       convert back to wav
-if not os.path.exists('audio_output/output_wav/'):
+try:
         os.mkdir('audio_output/output_wav')
-
+except OSError as e:
+        if e.errno != 17:
+                raise
+        
 print ("Converting to WAV")
 for fname in tqdm(os.listdir('audio_output/cleaned_mp3')):
         if '.mp3' in fname:
