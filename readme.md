@@ -1,3 +1,14 @@
+# Open Nsynth Super, SOPI edition
+
+This fork contains some fixes and modifications for SOPI use.
+
+We also have special documentation for generating audio:
+
+- [locally](audio/workdir/readme-sopi.md)
+- [on the Triton cluster](audio/workdir/readme-triton.md)
+
+--
+
 # Open NSynth Super
 
 ![Open NSynth Super with tools and designs](images/ons_main_hero.jpg)
