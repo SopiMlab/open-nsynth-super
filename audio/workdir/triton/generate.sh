@@ -9,7 +9,8 @@ for ((i=0; i < N; i++)); do
 		--save_path="$PROJECT_DIR/audio/workdir/audio_output/batch$i" \
 		--batch_size=2048 \
 		--alsologtostderr \
-		--gpu_number="$i" &
+		--gpu_number="$i" \
+                --samples_per_save=300000 &
 	pids[${i}]=$!
 done
 

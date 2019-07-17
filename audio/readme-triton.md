@@ -22,7 +22,7 @@ Log in to Triton using SSH. There are a variety of ready-to-use Anaconda modules
 module spider anaconda2
 ```
 
-It is perhaps unclear which available version is the most appropriate, or to what extent it makes a difference since we will be installing our own packages anyway. I have picked `anaconda2/5.1.0-gpu` somewhat arbitrarily.
+It's not entirely clear which available version is the most appropriate, or to what extent it makes a difference since we will be installing our own packages anyway. I have picked `anaconda2/5.1.0-gpu` somewhat arbitrarily.
 
 To load the module, run:
 
@@ -30,7 +30,7 @@ To load the module, run:
 module load anaconda2/5.1.0-gpu
 ```
 
-Create the conda environment on the scratch file system (refer to the [Python tutorial](https://scicomp.aalto.fi/triton/apps/python.html)):
+Create the conda environment on the scratch file system (refer to the [Python tutorial](https://scicomp.aalto.fi/triton/apps/python.html)) and activate it:
 
 ```
 mkdir "$WRKDIR/conda"

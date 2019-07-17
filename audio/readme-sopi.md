@@ -1,8 +1,8 @@
 # Open NSynth Super audio generation
 
-This guide is intended to supplement [Google's](https://github.com/googlecreativelab/open-nsynth-super/tree/master/audio).
+This guide is intended to supplement [Google's](https://github.com/googlecreativelab/open-nsynth-super/tree/master/audio) guide.
 
-The audio generation pipeline has seemingly only been tested on Linux. It can probably be made to work on other platforms, but there is e.g. some path manipulation code that assumes Unix paths and will break on Windows.
+The audio generation pipeline seems to have been tested only on Linux. It can probably be made to work on other platforms, but there is e.g. some path manipulation code that assumes Unix style paths and will break on Windows.
 
 Our reference computer's hardware specifications are:
 
@@ -10,7 +10,7 @@ Our reference computer's hardware specifications are:
 - RAM: 16 GB
 - GPU: NVIDIA GeForce GTX 1080 Ti (connected via external Thunderbolt enclosure)
 
-Ideally, your system will have even more of everything; multiple GPUs are particularly helpful. Note that CUDA, which is required, only works with NVIDIA GPUs.
+Ideally, your system will have more of everything; multiple GPUs and more RAM are particularly helpful. Note that CUDA, which is required, only works with NVIDIA GPUs.
 
 Software versions tested:
 
@@ -18,8 +18,8 @@ Software versions tested:
 - NVIDIA driver 418.67
 - CUDA 10.1
 - Python 2.7.16
-- tensorflow-gpu 1.14.0
-- magenta-gpu 1.1.2
+- tensorflow-gpu 1.13.0
+- magenta-gpu based on 1.1.2
 
 ## Install Linux
 
@@ -50,12 +50,10 @@ Now, open Software & Updates and go to the Additional Drivers tab. Select the la
 
 ## Install required packages
 
-We need Git as well as some header files:
+The audio generation pipeline requires a few packages to work. Install them using APT:
 
 ```
-sudo apt install git
-sudo apt install libasound2-dev
-sudo apt install libjack-jackd2-dev
+sudo apt install git libasound2-dev libjack-jackd2-dev ffmpeg sox lame libsox-fmt-mp3
 ```
 
 ## Install CUDA
@@ -84,61 +82,65 @@ Activate the environment:
 conda activate open-nsynth-super
 ```
 
-Install magenta-gpu:
-
-```
-pip install magenta-gpu
-```
-
-## Check GPU access
-
-TensorFlow should now be able to access your GPU. To test this, paste the following code into a new file called `listgpus.py`:
-
-```
-from tensorflow.python.client import device_lib
-
-for device in device_lib.list_local_devices():
-	if device.device_type == "GPU":
-		print(device)
-		print()
-```
-
-and run it:
-
-```
-python listgpus.py
-```
-
-If you can see your GPU in the printed list, you're good to go!
-
-TODO: provide this in our own repository
-
 ## Download code
 
-Clone the [open-nsynth-super repository](https://github.com/googlecreativelab/open-nsynth-super):
+Clone this repository:
 
 ```
-git clone https://github.com/googlecreativelab/open-nsynth-super.git
+git clone TODO
 ```
 
 Going forward, we'll assume the cloned repository is in our home directory: `/home/sopi/open-nsynth-super` — make sure to adjust paths according to your system.
 
-Enter the repository directory:
+## Install magenta-gpu
+
+Enter the open-nsynth-super repository directory:
 
 ```
 cd open-nsynth-super
 ```
 
-Google says to clone the Magenta repository here, but in fact we only need a small part of its directory structure. Create it manually:
+Clone our magenta repository and enter the resulting directory:
 
 ```
-mkdir -p magenta/magenta/models/nsynth
+git clone TODO
+cd magenta
 ```
 
-Download and extract the NSynth WaveNet checkpoint:
+Building the magenta-gpu package requires Python 3, so create and activate another conda environment for this:
 
 ```
-cd magenta/magenta/models/nsynth
+conda create magenta-build python=3.7 tensorflow-gpu=1.13
+conda activate magenta-build
+```
+
+Build the package:
+
+```
+python setup.py bdist_wheel --universal --gpu
+```
+
+This should create a file in the `dist` directory called something like `magenta_gpu-1.1.2-py2.py3-none-any.whl`.
+
+Switch back to the Python 2 environment and install the package:
+
+```
+conda activate open-nsynth-super
+pip install dist/magenta_gpu-1.1.2-py2.py3-none-any.whl
+```
+
+If you want, you can now remove the Python 3 environment:
+
+```
+conda env remove -n magenta-build
+```
+
+## Download checkpoint
+
+Download the NSynth WaveNet checkpoint into the appropriate directory and extract it:
+
+```
+cd magenta/models/nsynth
 wget http://download.magenta.tensorflow.org/models/nsynth/wavenet-ckpt.tar
 tar xf wavenet-ckpt.tar
 ```
@@ -155,52 +157,139 @@ Go back to the `open-nsynth-super` root:
 cd ../../../..
 ```
 
+## Check GPU access
+
+TensorFlow should now be able to access your GPU. To test this, enter the audio work directory and run the `listgpus.py` script:
+
+```
+cd audio/workdir
+python listgpus.py
+```
+
+If you can see your GPU(s) in the printed list, you're good to go!
+
 ## Prepare for generation
 
 Follow the [Preparing to run the pipeline](https://github.com/googlecreativelab/open-nsynth-super/tree/master/audio#preparing-to-run-the-pipeline) section of Google's guide to prepare audio files and edit `settings.json`.
 
-The `magenta_dir` setting should be set to the magenta directory you created. In my case this is `/home/sopi/open-nsynth-super/magenta`.
-
-Enter the audio work directory:
-
-```
-cd audio/workdir
-```
-
-## Fix Google's code
-
-As of July 2019, there appears to be a [bug](https://github.com/googlecreativelab/open-nsynth-super/issues/77) in the generation code. Edit the file `02_compute_new_embeddings.py` and find the line:
-
-```
-interpolated = np.reshape(interpolated, (1,) + interpolated.shape)
-```
-
-Remove this line or comment it out by adding a `#` at the start.
-
-TODO: provide our own modified fork of the repo
-
-### Progress reporting (optional but useful)
-
-The nsynth_generate script is not very helpful about reporting progress. This can be improved by making a small modification to Magenta's `fastgen.py` file, found deep in the conda environment's libraries directory; in our case at `/home/sopi/miniconda3/envs/open-nsynth-super/lib/python2.7/site-packages/magenta/models/nsynth/wavenet/fastgen.py`.
-
-In the function `synthesize()`, find the line:
-
-```
-tf.logging.info("Sample: %d" % sample_i)
-```
-
-and replace it with:
-
-```
-tf.logging.info("Sample: {}/{} ({:.1f}%)".format(sample_i, total_length, float(sample_i)/total_length*100))
-```
-
-making sure to keep the indentation intact. The script will now print completion percentages when generating samples.
-
-TODO: provide a magenta-gpu package that includes this?
+The `magenta_dir` setting should be set to your magenta directory. In my case this is `/home/sopi/open-nsynth-super/magenta`.
 
 ## Generate
 
-You should now be ready to run all the scripts! Follow the [Running the pipeline](https://github.com/googlecreativelab/open-nsynth-super/tree/master/audio#running-the-pipeline) section of Google's guide.
+You should now be ready to run all the scripts! Follow the [Running the pipeline](https://github.com/googlecreativelab/open-nsynth-super/tree/master/audio#running-the-pipeline) section of Google's guide, but have a look also at the notes below.
 
-`samples_per_save=300000`
+### 1. Compute input embeddings
+
+If you get an out of memory error, you can edit the `--batch_size` parameter on the last line of the script to use a smaller value than the default 64. However, any system where this is an issue will probably be very slow at generation.
+
+### 2. Compute interpolated embeddings
+
+Our modified version of this script fixes a [bug](https://github.com/googlecreativelab/open-nsynth-super/issues/77) where this step generates incorrectly shaped data.
+
+### 3. Batch embeddings for processing
+
+Nothing special here, just moving files around.
+
+### 4. Generate audio
+
+You can run this manually for each GPU, as suggested in Google's guide, or use the `generate.sh` script in the `triton` directory, passing the number of GPUs and the path to the `open-nsynth-super` directory as arguments, e.g.:
+
+```
+./triton/generate.sh 4 /home/sopi/open-nsynth-super
+```
+
+This would start 4 concurrent instances of `nsynth_generate`, using the GPUs with index 0, 1, 2 and 3 respectively.
+
+The `--batch_size` parameter has a big impact on performance. Our modified `nsynth_generate` prints out some useful progress information while running:
+
+```
+0.4% - Batch: 1/5 - Sample: 609001/32768000
+```
+
+For optimal performance, you'll want to minimize the total number of batches (5 in the example above) by increasing the batch size. Since the exact numbers will vary depending on the number of audio files, number of GPUs etc., and larger batch sizes also require more memory, you may need to experiment a bit.
+
+Another performance consideration is how often to save intermediate results to disk, as the saving can take a significant amount of time, during which generation is stalled. By default, `nsynth_generate` will save after every 10000 samples generated, which is quite frequent and can waste a lot of time.
+
+With our modified `nsynth_generate`, the save interval can be adjusted using the `--samples_per_save` parameter. I've found a value of 300000 to be reasonable.
+
+### 5. Clean files
+
+This is where the ffmpeg, sox, lame and libsox-fmt-mp3 packages (installed earlier) are needed.
+
+It's not clear why this step involves a WAV-to-MP3-to-WAV conversion. Maybe they're using MP3 as a low-pass filter to remove high frequency noise?
+
+### 6. Build pads
+
+Not sure whether it's my mistake, but this step gave me a file with the instruments in a different order than I expected, i.e. `bird1_bird2_bird4_bird3.bin` instead of `bird1_bird2_bird3_bird4.bin`. It's worth checking the output, because the order matters for the next step.
+
+### 7. Deploy to the device
+
+Google's guide technically explains how to do this, but the info is scattered across multiple documents. Here's a simpler version!
+
+Upon inserting your SD card into the computer, you'll see multiple partitions. On the largest partition, browse into `/home/pi` and create a directory for your sounds, e.g. `birds_audio` in my case. Copy the `.bin` file(s) from the previous step into this directory.
+
+Next, browse into `/home/pi/opt/of/apps/open-nsynth/open-nsynth/bin/data`. This folder contains the `settings.json` file to be edited, which you may want to back up first.
+
+Set `dataDirectory` to the path of the audio directory you created.
+
+In `pitches`, specify all the note numbers you used for your input audio files.
+
+Set your desired sample loop points with `loopStart` and `loopEnd` (specified in seconds) — or set `looping` to `false` to disable looping.
+
+In `corners`, enter your instruments for each corner of the touch pad. **Note that the order here needs to match the order in which the instruments appear in the name of your `.bin` file(s)!** `name` is the audio file name (without extension), `display` is the name shown on the synth while selecting instruments and `abbr` is the short name shown in the corners of the display when playing.
+
+Example:
+
+```
+{
+    "debug": false,
+    "nsynth": {
+        "dataDirectory": "/home/pi/birds_audio",
+        "resolution": 9,
+        "pitches": [24, 27, 30, 33],
+        "length": 60000,
+        "sampleRate": 16000,
+        "looping": true,
+        "loopStart": 0.0,
+        "loopEnd": 4.0
+    },
+    "corners": [
+        {
+            "instruments": [
+                {"name": "bird1", "display": "BIRD1", "abbr": "B1"}
+            ]
+        },
+        {
+            "instruments": [
+                {"name": "bird2", "display": "BIRD2", "abbr": "B2"}
+            ]
+        },
+        {
+            "instruments": [
+                {"name": "bird4", "display": "BIRD4", "abbr": "B4"}
+            ]
+        },
+        {
+            "instruments": [
+                {"name": "bird3", "display": "BIRD3", "abbr": "B3"}
+            ]
+        }
+    ],
+    "audio": {
+        "sampleRate": 48000,
+        "bufferSize": 128
+    },
+    "midi": {
+        "device": "/dev/ttyAMA0",
+        "channel": 1
+    },
+    "osc": {
+        "in": {
+            "portNumber": 8000
+        }
+    },
+    "patchFile": "/media/data/patches.json"
+}
+```
+
+Finally, save the file, eject the SD card and insert it back into the Open NSynth Super. You should now be able to play it with your sounds!
