@@ -84,10 +84,10 @@ conda activate open-nsynth-super
 
 ## Download code
 
-Clone this repository:
+Clone our [open-nsynth-super repository](https://github.com/SopiMlab/open-nsynth-super):
 
 ```
-git clone TODO
+git clone https://github.com/SopiMlab/open-nsynth-super.git
 ```
 
 Going forward, we'll assume the cloned repository is in our home directory: `/home/sopi/open-nsynth-super` — make sure to adjust paths according to your system.
@@ -103,14 +103,14 @@ cd open-nsynth-super
 Clone our magenta repository and enter the resulting directory:
 
 ```
-git clone TODO
+git clone https://github.com/SopiMlab/magenta.git
 cd magenta
 ```
 
 Building the magenta-gpu package requires Python 3, so create and activate another conda environment for this:
 
 ```
-conda create magenta-build python=3.7 tensorflow-gpu=1.13
+conda create -n magenta-build python=3.7 tensorflow-gpu=1.13
 conda activate magenta-build
 ```
 

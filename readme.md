@@ -4,10 +4,10 @@ This fork contains some fixes and modifications for SOPI use.
 
 We also have special documentation for generating audio:
 
-- [locally](audio/workdir/readme-sopi.md)
-- [on the Triton cluster](audio/workdir/readme-triton.md)
+- [on a local computer](audio/readme-sopi.md)
+- [on the Triton cluster](audio/readme-triton.md)
 
---
+---
 
 # Open NSynth Super
 
