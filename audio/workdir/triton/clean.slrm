@@ -3,14 +3,20 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
 
-N=4
+COUNT=$1
+
+if [ ! -n "$COUNT" ]; then
+    echo "usage: clean.slrm count"
+    exit 1
+fi
+
 PROJECT_DIR="$WRKDIR/open-nsynth-super"
 CONDA_ENV="$WRKDIR/conda/open-nsynth-super"
 
 cd "$PROJECT_DIR/audio/workdir"
 module load ffmpeg
 module load LAME
-module load SoX
+module load sox
 module load anaconda2/5.1.0-gpu
 source activate "$CONDA_ENV"
 
@@ -19,4 +25,4 @@ if [ ! -d audio_output/raw_wav ]; then
 	mv audio_output/batch* audio_output/raw_wav
 fi
 
-srun ./triton/clean.sh "$N" "$PROJECT_DIR"
+srun ./triton/clean.sh "$COUNT" "$PROJECT_DIR"

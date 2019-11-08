@@ -4,6 +4,14 @@
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:4
 
+COUNT=$1
+START=$2
+
+if [ ! -n "$COUNT" ] || [ ! -n "$START" ]; then
+    echo "usage: generate.slrm count start"
+    exit 1
+fi
+
 PROJECT_DIR="$WRKDIR/open-nsynth-super"
 CONDA_ENV="$WRKDIR/conda/open-nsynth-super"
 
@@ -11,4 +19,4 @@ cd "$PROJECT_DIR/audio/workdir"
 module load anaconda2/5.1.0-gpu
 source activate "$CONDA_ENV"
 
-srun ./triton/generate.sh 4 "$PROJECT_DIR"
+srun ./triton/generate.sh "$COUNT" "$START" "$PROJECT_DIR"
