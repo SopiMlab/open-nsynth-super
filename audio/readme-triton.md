@@ -2,7 +2,7 @@
 
 The Aalto Science-IT [Triton](https://scicomp.aalto.fi/triton/) computing cluster includes nodes with multiple fast GPUs.
 
-Running jobs on Triton is a bit different from using a regular Linux system, so the [Open NSynth Super audio generation](generating-audio.md) guide does not apply directly here, but it may still be helpful to reference.
+Running jobs on Triton is a bit different from using a regular Linux system, so the [Open NSynth Super audio generation](readme-sopi.md) guide does not apply directly here, but it may still be helpful to reference.
 
 To use Triton, you need to [request access](https://scicomp.aalto.fi/triton/accounts.html). It also requires some familiarity with the Linux command line and the Slurm job scheduling system. They have [tutorials](https://scicomp.aalto.fi/triton/tut/intro.html). You'll at least want to go through these:
 
@@ -35,7 +35,7 @@ Create the conda environment on the scratch file system (refer to the [Python tu
 ```
 mkdir "$WRKDIR/conda"
 module load teflon
-conda create -p "$WRKDIR/conda/open-nsynth-super" python=2.7 tensorflow-gpu
+conda create -p "$WRKDIR/conda/open-nsynth-super" python=2.7 tensorflow-gpu=1.14
 module unload teflon
 ```
 
@@ -77,7 +77,9 @@ cd magenta
 Building the magenta-gpu package requires Python 3, so create and activate another conda environment for this:
 
 ```
-conda create "$WRKDIR/conda/magenta-build" python=3.7 tensorflow-gpu=1.13
+module load teflon
+conda create -p "$WRKDIR/conda/magenta-build" python=3.7 tensorflow-gpu=1.14
+module unload teflon
 conda activate "$WRKDIR/conda/magenta-build"
 ```
 
@@ -87,14 +89,17 @@ Build the package:
 python setup.py bdist_wheel --universal --gpu
 ```
 
-This should create a file in the `dist` directory called something like `magenta_gpu-1.1.2-py2.py3-none-any.whl`.
+This should create a file in the `dist` directory called something like `magenta_gpu-1.1.7-py2.py3-none-any.whl`.
 
 Switch back to the Python 2 environment and install the package:
 
 ```
+conda deactivate
+# run this line if you're not in open-nsynth-super at this point:
 conda activate "$WRKDIR/conda/open-nsynth-super"
+
 module load teflon
-pip install dist/magenta_gpu-1.1.2-py2.py3-none-any.whl
+pip install dist/magenta_gpu-1.1.7-py2.py3-none-any.whl
 module unload teflon
 ```
 
@@ -132,9 +137,11 @@ Follow the [Preparing to run the pipeline](https://github.com/googlecreativelab/
 
 The `magenta_dir` setting should be set to the magenta directory you created. In my case this is `/scratch/work/kastemm1/open-nsynth-super/magenta`.
 
-The `gpus` setting should reflect the number of GPUs available on the node you intend to use. See the [Triton cluster overview](https://scicomp.aalto.fi/triton/overview.html) for a list of available nodes. So far, I've only tested on the gpu[28-37] nodes, which have 4 GPUs.
+The `gpus` setting should reflect the total number of GPUs on the node(s) you intend to use for generation. E.g. if you use two nodes with 4 GPUs each, specify 8.
 
-Enter the audio work directory:
+See the [Triton cluster overview](https://scicomp.aalto.fi/triton/overview.html) for a list of available nodes.
+
+Once done, enter the audio work directory:
 
 ```
 cd audio/workdir
@@ -158,25 +165,48 @@ Once the job has started, `slurm watch queue` will show the name of the node whe
 - `htop`, to see CPU and memory use
 - `watch -n 1 nvidia-smi`, to see GPU use
 
+### Deactivate the conda environment!
+
+Having a conda environment active when submitting jobs can mess up Python paths, so make sure to deactivate first.
+
+```
+conda deactivate
+```
+
 ### Compute and batch embeddings
 
-Steps 1-3 are covered by the `prepare` script:
+The `prepare` script handles steps 1-3 (computing and batching embeddings):
 
 ```
 sbatch triton/prepare.slrm
 ```
 
-This job should take no longer than a few minutes to complete.
+This job should take no longer than a few minutes to complete. Afterwards, you should have a subdirectory in `embeddings_batched` for each GPU, named `batch0`, `batch1` etc.
 
 ### Generate audio
 
+To generate, you will need to submit a job for each node you intend to use, with a command like:
+
 ```
-sbatch triton/generate.slrm
+sbatch triton/generate.slrm <BATCH_COUNT> <BATCH_START>
 ```
 
-This will take days.
+where `BATCH_COUNT` specifies the number of batches to process on the node, typically equal to the number of GPUs on the node, and `BATCH_START` specifies the number of the node to start from.
+
+As an example, say we want to run on two nodes, with 4 GPUs each. The commands would be:
+
+```
+sbatch triton/generate.slrm 4 0
+sbatch triton/generate.slrm 4 4
+```
+
+The first node will process batches 0,1,2,3 while the second one will do batches 4,5,6,7.
+
+Generation will typically take several days.
 
 ### Clean files
+
+Once generation has finished, the audio files need to be cleaned up. Run:
 
 ```
 sbatch triton/clean.slrm
@@ -184,7 +214,10 @@ sbatch triton/clean.slrm
 
 ### Build pads
 
+Finally, to build the `.bin` file(s), you can again activate the conda environment and run `06_build_pads.py` directly:
+
 ```
+conda activate "$WRKDIR/conda/open-nsynth-super"
 python 06_build_pads.py
 ```
 
